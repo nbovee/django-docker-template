@@ -11,7 +11,7 @@ from django.contrib.auth.hashers import make_password
 
 
 class Command(BaseCommand):
-    help = "Safely create an admin user if it doesn't exist"
+    help = "Safely create an admin user if there are no users, and quietly exit if it already exists."
 
     def add_arguments(self, parser):
         parser.add_argument("--username", help="Username for superuser")
@@ -23,10 +23,18 @@ class Command(BaseCommand):
             help="Use preset options from within the environment",
             action="store_true",
         )
+        parser.add_argument(
+            "--populated",
+            help="Attempt creation even if the user table is populated",
+            action="store_true",
+        )
 
     def handle(self, *args, **options):
         User = get_user_model()
-
+        if User.objects.exists():
+            self.stderr.write(self.style.WARNING("User table already exists."))
+        if not options["populated"]:
+            return
         if options["no_input"]:
             options["username"] = os.environ["DJANGO_SUPERUSER_USERNAME"]
             options["email"] = os.environ["DJANGO_SUPERUSER_EMAIL"]
